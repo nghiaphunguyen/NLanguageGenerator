@@ -1,5 +1,4 @@
 SPREAD_SHEET_ID="1hDbMgE4xf4O8KkKxW6HdSylpka86wb6zHHBkBirPtoY"
-SHEET_NAMES="translations"
 CLIENT_SECRET_FILE = "client_secret.json"
 ENUM_NAME="FSText"
 ENUM_PATH="../FastSell/Classes/Constants/Text"

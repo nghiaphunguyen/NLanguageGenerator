@@ -29,7 +29,7 @@ ENUM_PATH_KEY = 'ENUM_PATH'
 LANGUAGES_PATH_KEY = 'LANGUAGES_PATH'
 USE_BASE_LANGUAGE_AS_KEY_KEY = 'USE_BASE_LANGUAGE_AS_KEY'
 
-CONFIGS = {SPREAD_SHEET_ID_KEY: "", SHEET_NAMES_KEY: "Sheet1",
+CONFIGS = {SPREAD_SHEET_ID_KEY: "", SHEET_NAMES_KEY: "",
  CLIENT_SECRET_FILE_KEY: "client_secret.json",
   ENUM_NAME_KEY: "Text", ENUM_PATH_KEY: "", LANGUAGES_PATH_KEY: "", USE_BASE_LANGUAGE_AS_KEY_KEY: "false"}
 
@@ -111,9 +111,21 @@ def getValuesFromGoogleSheet():
     service = discovery.build('sheets', 'v4', http=http, discoveryServiceUrl=discoveryUrl)
 
     spreadsheetId = CONFIGS[SPREAD_SHEET_ID_KEY]
-    rangeNames = CONFIGS[SHEET_NAMES_KEY].split(",")
-    result = service.spreadsheets().values().batchGet(
-        spreadsheetId=spreadsheetId, ranges=rangeNames).execute()
+
+    rangeNamesString = CONFIGS[SHEET_NAMES_KEY]
+    result = list()
+    if rangeNamesString == "":
+        spreadsheet = service.spreadsheets().get(spreadsheetId=spreadsheetId).execute()
+        sheets = spreadsheet.get("sheets", [])
+        rangeNames = list()
+        for sheet in sheets:
+            rangeNames.append(sheet.get("properties").get("title"))
+        result = service.spreadsheets().values().batchGet(
+            spreadsheetId=spreadsheetId, ranges=rangeNames).execute()
+    else:
+        rangeNames = rangeNamesString.split(",")
+        result = service.spreadsheets().values().batchGet(
+            spreadsheetId=spreadsheetId, ranges=rangeNames).execute()
 
     values = result.get('valueRanges', [])
     return values
