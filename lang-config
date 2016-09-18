@@ -1,0 +1,7 @@
+SPREAD_SHEET_ID="1hDbMgE4xf4O8KkKxW6HdSylpka86wb6zHHBkBirPtoY"
+SHEET_NAME="translations"
+CLIENT_SECRET_FILE = "client_secret.json"
+ENUM_NAME="FSText"
+ENUM_PATH="../FastSell/Classes/Constants/Text"
+LANGUAGES_PATH="../FastSell/Resource/Languages"
+USE_BASE_LANGUAGE_AS_KEY="false"
