@@ -22,14 +22,14 @@ APPLICATION_NAME = 'Language Generator'
 CONFIG_FILE_NAME = 'lang-config'
 
 SPREAD_SHEET_ID_KEY = 'SPREAD_SHEET_ID'
-SHEET_NAME_KEY = 'SHEET_NAME'
+SHEET_NAMES_KEY = 'SHEET_NAMES'
 CLIENT_SECRET_FILE_KEY = 'CLIENT_SECRET_FILE'
 ENUM_NAME_KEY = 'ENUM_NAME'
 ENUM_PATH_KEY = 'ENUM_PATH'
 LANGUAGES_PATH_KEY = 'LANGUAGES_PATH'
 USE_BASE_LANGUAGE_AS_KEY_KEY = 'USE_BASE_LANGUAGE_AS_KEY'
 
-CONFIGS = {SPREAD_SHEET_ID_KEY: "", SHEET_NAME_KEY: "Sheet1",
+CONFIGS = {SPREAD_SHEET_ID_KEY: "", SHEET_NAMES_KEY: "Sheet1",
  CLIENT_SECRET_FILE_KEY: "client_secret.json",
   ENUM_NAME_KEY: "Text", ENUM_PATH_KEY: "", LANGUAGES_PATH_KEY: "", USE_BASE_LANGUAGE_AS_KEY_KEY: "false"}
 
@@ -98,7 +98,8 @@ def get_credentials():
 
 def main():
     get_configs()
-    convertToStringsFromValues(getValuesFromGoogleSheet())
+    values = mergeValues(getValuesFromGoogleSheet())
+    convertToStringsFromValues(values)
     print("-------------DONE----------")
 
 def getValuesFromGoogleSheet():
@@ -110,12 +111,35 @@ def getValuesFromGoogleSheet():
     service = discovery.build('sheets', 'v4', http=http, discoveryServiceUrl=discoveryUrl)
 
     spreadsheetId = CONFIGS[SPREAD_SHEET_ID_KEY]
-    rangeName = CONFIGS[SHEET_NAME_KEY]
-    result = service.spreadsheets().values().get(
-        spreadsheetId=spreadsheetId, range=rangeName).execute()
+    rangeNames = CONFIGS[SHEET_NAMES_KEY].split(",")
+    result = service.spreadsheets().values().batchGet(
+        spreadsheetId=spreadsheetId, ranges=rangeNames).execute()
 
-    values = result.get('values', [])
+    values = result.get('valueRanges', [])
     return values
+
+def mergeValues(values):
+    result = dict()
+    keys = list()
+    header = list()
+    for i in xrange(len(values)):
+        value = values[i].get("values", [])
+
+        if len(value) < 2:
+            continue
+
+        if len(header) < 1:
+            header = value[0]
+        value = value[1:]
+        for row in value:
+            if len(row) < 2:
+                continue
+
+            result[row[0]] = row
+
+    re = result.values()
+    re.insert(0, header)
+    return re
 
 def formatValue(value):
     value = convertToUTF8(value)
