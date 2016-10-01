@@ -97,6 +97,8 @@ def get_credentials():
     return credentials
 
 def main():
+    # result = extensionDescriptionFromBaseLanguage("nghia has %@ %@")
+    # print("Regex %s" % result[0])
     get_configs()
     values = mergeValues(getValuesFromGoogleSheet())
     convertToStringsFromValues(values)
@@ -168,22 +170,80 @@ def formatKey(key):
             result += value.title()
     return result
 
+def regrexBaseLanguage(base):
+    pattern = "(%@|%f|%d)"
+    result = re.findall(pattern, base)
+
+    return result
+
+def extensionCaseFromBaseLanguage(base):
+    result = regrexBaseLanguage(base)
+    mapping = {"%@" : "String", "%f" : "Double", "%d" : "Int"}
+
+    if not result:
+        return ""
+
+    return "(" + ", ".join(mapping[k] for k in result) + ")"
+
+def extensionDescriptionFromBaseLanguage(base):
+    result = regrexBaseLanguage(base)
+
+    if not result:
+        return ("", "")
+
+    result1 = "(" + ", ".join("let p{}".format(k) for k in xrange(len(result))) + ")"
+    result2 = ", ".join("p{}".format(k) for k in xrange(len(result)))
+
+    return (result1, result2)
+
 def createTextFile(keys):
     print("------CREATING TEXT FILE---------")
     filename = CONFIGS[ENUM_NAME_KEY]
     path = CONFIGS[ENUM_PATH_KEY]
 
-    result = "import UIKit\n\nenum %s: String {" % filename
+    result = "import UIKit\n\nenum %s {" % filename
     result += "\n"
 
     for key in keys:
-        if CONFIGS[USE_BASE_LANGUAGE_AS_KEY_KEY] == "true":
-            result += "\tcase %s = \"%s\"\n" % (key[0], key[1])
-        else:
-            result += "\tcase %s\n" % key[0]
+        result += "\t//%s\n" % key[1]
+        result += "\tcase %s%s" % (key[0], extensionCaseFromBaseLanguage(key[1])) + "\n"
+
     result += "\n\tvar text: String {\n"
-    result += "\t\treturn NSLocalizedString(\"\\(self.rawValue)\", comment: \"\")\n"
-    result += "\t}\n}"
+    result += "\t\tswitch self {\n"
+    for key in keys:
+        extensionDescription = extensionDescriptionFromBaseLanguage(key[1])
+        # value = ""
+        if (CONFIGS[USE_BASE_LANGUAGE_AS_KEY_KEY] == "true"):
+            value = key[1]
+        else:
+            value = key[0]
+        result += "\t\t\tcase .%s%s:\n" % (key[0], extensionDescription[0])
+
+        if extensionDescription[1] == "":
+            result += "\t\t\t\t\"%s\".nk_localized\n" % (value)
+        else:
+            result += "\t\t\t\t\"%s\".nk_localized.nk_format(%s)\n" % (value, extensionDescription[1])
+
+    result += "\t\t}\n\t}\n"
+    # for key in keys:
+    #     if CONFIGS[USE_BASE_LANGUAGE_AS_KEY_KEY] == "true":
+    #         result += "\tcase %s = \"%s\"\n" % (key[0], key[1])
+    #     else:
+    #         result += "\tcase %s\n" % key[0]
+    # result += "\n\tvar text: String {\n"
+    # result += "\t\treturn NSLocalizedString(\"\\(self.rawValue)\", comment: \"\")\n"
+    result += "}"
+
+    result += "\nextension String {\n"
+    result += "\tvar nk_localized: String {\n"
+    result += "\t\treturn NSLocalizedString(\"\\(self)\", comment: \"\")\n"
+    result += "\t}\n"
+
+    result += "\n\tfunc nk_format(args: CVarArgType...) -> String {\n"
+    result += "\t\treturn String(format: self, arguments: args)\n"
+    result += "\t}\n"
+
+    result += "}"
 
     filePath = os.path.join(path, filename + ".swift")
     writeToFile(filePath, result)
